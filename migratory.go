@@ -3,6 +3,8 @@ package migratory
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 )
 
@@ -10,6 +12,7 @@ type Migratory struct {
 	dir    string
 	dsn    string
 	target string
+	logger log.Logger
 
 	db *sql.DB
 }
@@ -49,6 +52,9 @@ func (m *Migratory) preFlight() error {
 	if err := m.preFlightDB(); err != nil {
 		return err
 	}
+	if err := m.preFlightPath(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -62,6 +68,15 @@ func (m *Migratory) preFlightDB() error {
 		return err
 	}
 	return m.db.Ping()
+}
+
+func (m *Migratory) preFlightPath() error {
+	if _, err := os.Stat(m.dir); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("migratory: migration directory issue: %v", err)
+		}
+	}
+	return nil
 }
 
 func (m *Migratory) constructPlan() (*Plan, error) {
